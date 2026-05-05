@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-docx-js/0.4.0/html-docx.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -1955,48 +1956,50 @@
             const date = formData.get('date') || new Date().toISOString().split('T')[0];
             const template = formData.get('template');
 
+            if (!file) {
+                showStatus('convertStatus', 'error', '轉換失敗', '請選擇一個 Markdown 檔案');
+                return;
+            }
+
             showStatus('convertStatus', 'loading', '轉換中...', '正在處理檔案，請稍候...');
 
             try {
                 const content = await readFileContent(file);
-                
-                // If title not provided, extract from content
+
                 if (!title || title.trim() === '') {
-                    title = extractTitleFromContent(content) || file.name.replace('.md', '');
+                    title = extractTitleFromContent(content) || file.name.replace(/\.md$/i, '');
                 }
-                
-                const result = await callBackendConvert(content, file.name, title, date || new Date().toISOString().split('T')[0]);
 
-                if (result.success) {
-                    // 自動下載轉換後的文件
-                    const outputPath = result.outputFile;
-                    const downloadName = file.name.replace('.md', '_processed.docx');
-                    downloadFile(outputPath, downloadName);
+                const cleanedContent = cleanCiteTags(content);
+                const citeCount = countCiteTags(content);
+                const originalSize = content.length;
+                const cleanedSize = cleanedContent.length;
 
-                    addToHistory({
-                        type: 'single',
-                        inputFile: file.name,
-                        outputFile: downloadName,
-                        title: title,
-                        date: date,
-                        template: template,
-                        citeCount: result.citeCount,
-                        originalSize: result.originalSize,
-                        cleanedSize: result.cleanedSize,
-                        status: 'success',
-                        timestamp: new Date().toISOString()
-                    });
+                const blob = generateDocxBlob(cleanedContent, title, date);
+                const downloadName = file.name.replace(/\.md$/i, '_processed.docx');
+                downloadBlob(blob, downloadName);
 
-                    showStatus('convertStatus', 'success', '✅ 轉換成功！已自動下載',
-                        `檔案已生成並下載：<strong>${downloadName}</strong><br>
-                         位置: output 資料夾<br><br>
-                         <small>統計資訊：<br>
-                         • 移除 cite 標籤: ${result.citeCount} 個<br>
-                         • 字元數: ${result.originalSize} → ${result.cleanedSize}<br>
-                         • 減少: ${result.originalSize - result.cleanedSize} 字元</small>`);
-                } else {
-                    showStatus('convertStatus', 'error', '轉換失敗', result.message);
-                }
+                addToHistory({
+                    type: 'single',
+                    inputFile: file.name,
+                    outputFile: downloadName,
+                    title: title,
+                    date: date,
+                    template: template,
+                    citeCount: citeCount,
+                    originalSize: originalSize,
+                    cleanedSize: cleanedSize,
+                    status: 'success',
+                    timestamp: new Date().toISOString()
+                });
+
+                showStatus('convertStatus', 'success', '✅ 轉換成功！已自動下載',
+                    `檔案已生成並下載：<strong>${downloadName}</strong><br>
+                     下載目錄依瀏覽器設定而定<br><br>
+                     <small>統計資訊：<br>
+                     • 移除 cite 標籤: ${citeCount} 個<br>
+                     • 字元數: ${originalSize} → ${cleanedSize}<br>
+                     • 減少: ${originalSize - cleanedSize} 字元</small>`);
             } catch (error) {
                 showStatus('convertStatus', 'error', '轉換失敗', error.message);
             }
@@ -2017,30 +2020,43 @@
 
             showStatus('batchStatus', 'loading', '批量轉換中...', `正在處理 ${files.length} 個檔案...`);
 
-            // Simulate batch conversion
+            let totalCiteCount = 0;
+            let convertedCount = 0;
+
             for (let i = 0; i < files.length; i++) {
-                await simulateProgress();
                 const file = files[i];
-                const outputName = file.name.replace('.md', `_${new Date().getTime()}.docx`);
+                const content = await readFileContent(file);
+                const cleanedContent = cleanCiteTags(content);
+                const citeCount = countCiteTags(content);
+                const title = extractTitleFromContent(content) || file.name.replace(/\.md$/i, '');
+                const blob = generateDocxBlob(cleanedContent, title, date);
+                const outputName = file.name.replace(/\.md$/i, `_${new Date().getTime()}.docx`);
+
+                downloadBlob(blob, outputName);
 
                 addToHistory({
                     type: 'batch',
                     inputFile: file.name,
                     outputFile: outputName,
-                    title: '批量處理',
+                    title: title,
                     date: date,
                     template: template,
+                    citeCount: citeCount,
                     status: 'success',
                     timestamp: new Date().toISOString()
                 });
+
+                totalCiteCount += citeCount;
+                convertedCount++;
+                await simulateProgress();
             }
 
             showStatus('batchStatus', 'success', '✅ 批量轉換完成！',
-                `成功處理 ${files.length} 個檔案<br>
-                 所有檔案已生成到 output 資料夾<br><br>
+                `成功處理 ${convertedCount} 個檔案<br>
+                 下載的檔案將由瀏覽器儲存<br><br>
                  <small>統計資訊：<br>
-                 • 總移除 cite 標籤: ${files.length * 120} 個<br>
-                 • 平均處理時間: < 1秒/檔案</small>`);
+                 • 總移除 cite 標籤: ${totalCiteCount} 個<br>
+                 • 平均處理時間: 約 1-2 秒/檔案</small>`);
         }
 
         async function simulateProgress() {
@@ -2284,53 +2300,50 @@
             });
         }
 
-        async function callBackendConvert(content, filename, title, date) {
-            // 確保 title 非空，否則使用檔名
-            if (!title || title.trim() === '') {
-                title = filename.replace('.md', '');
-            }
-            // 確保 date 格式正確
-            if (!date) {
-                date = new Date().toISOString().split('T')[0];
-            }
-            // 調用後端 API
-            const request = {
-                content: content,
-                filename: filename,
-                title: title,
-                date: date
-            };
+        function generateDocxBlob(cleanedContent, title, date) {
+            const htmlBody = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8" />
+                    <title>${escapeHtml(title)}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; }
+                        h1, h2, h3, h4, h5, h6 { color: #333; }
+                        pre { background: #f7f7f7; padding: 0.75rem; border-radius: 0.5rem; }
+                        code { font-family: Consolas, monospace; }
+                        blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 4px solid #ddd; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${escapeHtml(title)}</h1>
+                    <p><strong>日期：</strong>${escapeHtml(date)}</p>
+                    <hr />
+                    ${md.render(cleanedContent)}
+                </body>
+                </html>`;
 
-            try {
-                const response = await fetch('http://localhost:8888/api/convert', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(request)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                return result;
-            } catch (error) {
-                console.error('Backend API error:', error);
-                throw new Error('無法連接到轉換伺服器，請確保伺服器已啟動：web_server.exe');
-            }
+            return HTMLDocx.asBlob(htmlBody);
         }
 
-        function downloadFile(filePath, downloadName) {
-            // 使用後端的下載 API
-            const downloadUrl = `http://localhost:8888/api/download?file=${encodeURIComponent(filePath)}`;
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = downloadName;
+            a.href = url;
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         // Keyboard shortcuts
