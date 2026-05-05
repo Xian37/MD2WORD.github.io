@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MD2WORD - GitHub Pages</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 700px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.12);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.15);
+      backdrop-filter: blur(12px);
+      padding: 3rem;
+    }
+    h1 {
+      margin-bottom: 1rem;
+      font-size: 2.6rem;
+    }
+    p {
+      margin: 1rem 0;
+      line-height: 1.65;
+      color: #f0f4ff;
+    }
+    .btn {
+      display: inline-block;
+      margin: 1.5rem 0 0;
+      padding: 1rem 2rem;
+      border-radius: 999px;
+      background: #fff;
+      color: #4a4a4a;
+      text-decoration: none;
+      font-weight: 700;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.18);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.22);
+    }
+    .note {
+      margin-top: 1.5rem;
+      color: rgba(255,255,255,0.85);
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MD2WORD Web 工具</h1>
+    <p>已啟用純前端 DOCX 轉換模式，您可以直接在瀏覽器中上傳 Markdown 檔案並生成 Word 文件。</p>
+    <a class="btn" href="web_gui.html">立即使用工具</a>
+    <p class="note">如果您需要離線使用，可以直接下載整個專案並開啟 <code>web_gui.html</code>。</p>
+    <p class="note">GitHub Pages 將自動顯示此頁面，並提供方便入口。</p>
+  </div>
+</body>
+</html>

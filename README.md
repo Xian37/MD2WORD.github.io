@@ -2,11 +2,21 @@
 
 ## 🚀 啟動方式
 
-### 方式 1：雙擊啟動（推薦）
+### 方式 1：GitHub Pages 網站（推薦）
+1. 開啟 GitHub Pages 網址，例如 `https://xian37.github.io/`
+2. 點擊首頁的「立即使用工具」
+3. 在網頁中上傳 Markdown 檔案並下載產生的 Word 文件
+
+### 方式 2：直接打開網頁
+1. 下載或克隆這個專案
+2. 直接開啟 `web_gui.html`
+3. 上傳 Markdown 檔案進行轉換
+
+### 方式 3：本機啟動（舊版方式）
 1. 雙擊 `start.bat` 檔案
 2. 伺服器自動啟動，Web 介面自動打開
 
-### 方式 2：手動啟動
+### 方式 4：手動啟動（舊版方式）
 1. 打開命令提示符（cmd）
 2. 執行：`.\bin\web_server.exe`
 3. 在瀏覽器中打開：`http://localhost:8888/web_gui.html`
