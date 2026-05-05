@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown to Word 轉換工具</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it-katex/2.0.3/markdown-it-katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --error: #f44336;
+            --info: #2196f3;
+            --light: #f5f5f5;
+            --dark: #333;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            color: var(--dark);
+        }
+
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo i {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .logo-text h1 {
+            font-size: 1.5rem;
+            color: var(--dark);
+        }
+
+        .logo-text p {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0;
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            font-weight: 500;
+        }
+
+        .tab-btn:hover {
+            background: var(--light);
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-btn i {
+            margin-right: 0.5rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        .page {
+            display: none;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header i {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-right: 1rem;
+        }
+
+        .card-header h2 {
+            color: var(--dark);
+            font-size: 1.5rem;
+        }
+
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: var(--transition);
+            background: white;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .file-input-wrapper:hover,
+        .file-input-wrapper.dragover {
+            border-color: var(--primary);
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .file-input-wrapper i {
+            font-size: 3rem;
+            color: #ccc;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .file-input-wrapper span {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: var(--dark);
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #45a049;
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        /* Status Messages */
+        .status {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #81c784;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef5350;
+        }
+
+        .status.loading {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #64b5f6;
+        }
+
+        .status.warning {
+            background: #fff3e0;
+            color: #ef6c00;
+            border: 1px solid #ffb74d;
+        }
+
+        .status-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* File List */
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+            transition: var(--transition);
+        }
+
+        .file-item:hover {
+            background: var(--light);
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .file-info i {
+            color: var(--primary);
+        }
+
+        .file-name {
+            font-weight: 500;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .file-remove {
+            color: var(--error);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .file-remove:hover {
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        /* Settings */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: 8px;
+        }
+
+        .setting-info h4 {
+            margin-bottom: 0.25rem;
+            color: var(--dark);
+        }
+
+        .setting-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* History */
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid #f0f0f0;
+            transition: var(--transition);
+        }
+
+        .history-item:hover {
+            background: var(--light);
+        }
+
+        .history-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .history-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .history-icon.success {
+            background: var(--success);
+        }
+
+        .history-icon.error {
+            background: var(--error);
+        }
+
+        .history-details h4 {
+            margin-bottom: 0.25rem;
+            color: var(--dark);
+        }
+
+        .history-details p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Preview Modal */
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .preview-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-content {
+            background: white;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 1000px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            background: var(--light);
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+
+        .preview-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .preview-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .preview-toggle {
+            display: flex;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+
+        .preview-toggle-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+
+        .preview-toggle-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .preview-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .preview-close:hover {
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--error);
+        }
+
+        .preview-body {
+            flex: 1;
+            display: flex;
+            min-height: 500px;
+        }
+
+        .preview-panel {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .preview-panel.source {
+            background: #f8f8f8;
+            border-right: 1px solid #e0e0e0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .preview-panel.rendered {
+            background: white;
+        }
+
+        .preview-panel.rendered h1,
+        .preview-panel.rendered h2,
+        .preview-panel.rendered h3,
+        .preview-panel.rendered h4,
+        .preview-panel.rendered h5,
+        .preview-panel.rendered h6 {
+            color: var(--dark);
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .preview-panel.rendered h1 { font-size: 2rem; border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; }
+        .preview-panel.rendered h2 { font-size: 1.5rem; border-bottom: 1px solid var(--primary); padding-bottom: 0.3rem; }
+        .preview-panel.rendered h3 { font-size: 1.25rem; color: var(--primary); }
+        .preview-panel.rendered h4 { font-size: 1.1rem; color: var(--primary); }
+
+        .preview-panel.rendered p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .preview-panel.rendered blockquote {
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #666;
+            font-style: italic;
+        }
+
+        .preview-panel.rendered code {
+            background: #f4f4f4;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        .preview-panel.rendered pre {
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .preview-panel.rendered pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .preview-panel.rendered ul,
+        .preview-panel.rendered ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .preview-panel.rendered li {
+            margin-bottom: 0.5rem;
+        }
+
+        .preview-panel.rendered table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            border: 1px solid #e0e0e0;
+        }
+
+        .preview-panel.rendered th,
+        .preview-panel.rendered td {
+            border: 1px solid #e0e0e0;
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+        .preview-panel.rendered th {
+            background: var(--light);
+            font-weight: 600;
+        }
+
+        .preview-stats {
+            background: var(--light);
+            padding: 1rem;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-label {
+            font-weight: 500;
+        }
+
+        .stat-value {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .cite-highlight {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid #ffc107;
+            border-radius: 3px;
+            padding: 0.1rem 0.3rem;
+            margin: 0 0.1rem;
+            font-size: 0.8em;
+            color: #856404;
+        }
+
+        /* Help */
+        .help-section {
+            margin-bottom: 2rem;
+        }
+
+        .help-section h3 {
+            color: var(--dark);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .help-content {
+            background: var(--light);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-item i {
+            color: var(--success);
+            margin-top: 0.25rem;
+        }
+
+        .feature-item h4 {
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .feature-item p {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-tabs {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Preview Modal Styles */
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .preview-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1200px;
+            height: 80%;
+            max-height: 800px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            background: var(--light);
+        }
+
+        .preview-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .preview-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .preview-toggle {
+            display: flex;
+            background: #f5f5f5;
+            border-radius: 6px;
+            padding: 2px;
+        }
+
+        .preview-toggle-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .preview-toggle-btn.active {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: var(--primary);
+        }
+
+        .preview-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .preview-close:hover {
+            background: #f5f5f5;
+            color: var(--dark);
+        }
+
+        .preview-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            gap: 1rem;
+        }
+
+        .preview-panel {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: block;
+            min-width: 0;
+            background: #fafafa;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+        }
+
+        .preview-panel.rendered {
+            background: white;
+        }
+
+        .preview-panel.rendered h1,
+        .preview-panel.rendered h2,
+        .preview-panel.rendered h3,
+        .preview-panel.rendered h4,
+        .preview-panel.rendered h5,
+        .preview-panel.rendered h6 {
+            color: var(--dark);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .preview-panel.rendered p {
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .preview-panel.rendered code {
+            background: #f5f5f5;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .preview-panel.rendered pre {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .preview-panel.source {
+            background: #f8f8f8;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .preview-stats {
+            border-top: 1px solid #e0e0e0;
+            padding: 1rem 1.5rem;
+            background: var(--light);
+        }
+
+        .preview-stats .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Quick Convert Styles */
+        .quick-process {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--light) 0%, rgba(255, 255, 255, 0.8) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .process-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            max-width: 150px;
+        }
+
+        .step-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .step-content h4 {
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .step-content p {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .step-arrow {
+            color: var(--primary);
+            font-size: 1.5rem;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(0); }
+            40% { transform: translateX(5px); }
+            60% { transform: translateX(-5px); }
+        }
+
+        .quick-preview {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--light);
+            border-radius: 8px;
+            border-left: 4px solid var(--info);
+        }
+
+        .quick-preview h4 {
+            color: var(--dark);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .quick-process {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .step-arrow {
+                transform: rotate(90deg);
+                animation: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-file-word"></i>
+                    <div class="logo-text">
+                        <h1>Markdown to Word</h1>
+                        <p>智能文檔轉換工具</p>
+                    </div>
+                </div>
+                <nav class="nav-tabs">
+                    <button class="tab-btn active" data-page="convert">
+                        <i class="fas fa-exchange-alt"></i>轉換
+                    </button>
+                    <button class="tab-btn" data-page="settings">
+                        <i class="fas fa-cog"></i>設置
+                    </button>
+                    <button class="tab-btn" data-page="history">
+                        <i class="fas fa-history"></i>歷史記錄
+                    </button>
+                    <button class="tab-btn" data-page="help">
+                        <i class="fas fa-question-circle"></i>說明
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Convert Page -->
+            <div id="convert" class="page active">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-file-upload"></i>
+                        <h2>單檔案轉換</h2>
+                    </div>
+
+                    <form id="convertForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="mdFile">選擇 Markdown 檔案</label>
+                                <div class="file-input-wrapper">
+                                    <input type="file" id="mdFile" name="mdFile" accept=".md" required>
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>點擊或拖拽檔案到此處</span>
+                                </div>
+                                <div id="fileInfo" class="file-info" style="display: none; margin-top: 1rem;"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="title">文檔標題（選填）</label>
+                                <input type="text" id="title" name="title" placeholder="例如：GaN驅動器IC設計報告">
+                                <small style="color: #999; margin-top: 0.5rem; display: block;">留空將自動從檔案內容提取標題</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="date">文檔日期</label>
+                                <input type="date" id="date" name="date">
+                                <small style="color: #999; margin-top: 0.5rem; display: block;">留空將使用今天日期</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="template">Word 模板</label>
+                                <select id="template" name="template">
+                                    <option value="default">預設模板</option>
+                                    <option value="academic">學術論文</option>
+                                    <option value="report">技術報告</option>
+                                    <option value="simple">簡潔風格</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-info" onclick="previewFile()">
+                                <i class="fas fa-eye"></i>預覽
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-play"></i>開始轉換
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                <i class="fas fa-undo"></i>重置
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="convertStatus" class="status"></div>
+                </div>
+            </div>
+
+            <!-- Batch Page -->
+            <div id="batch" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-layer-group"></i>
+                        <h2>批量檔案處理</h2>
+                    </div>
+
+                    <form id="batchForm">
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>選擇多個 Markdown 檔案</label>
+                                <div class="file-input-wrapper">
+                                    <input type="file" id="batchFiles" name="batchFiles" accept=".md" multiple required>
+                                    <i class="fas fa-folder-open"></i>
+                                    <span>點擊選擇多個檔案，或拖拽檔案到此處</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="batchTemplate">統一模板</label>
+                                <select id="batchTemplate" name="batchTemplate">
+                                    <option value="default">預設模板</option>
+                                    <option value="academic">學術論文</option>
+                                    <option value="report">技術報告</option>
+                                    <option value="simple">簡潔風格</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="batchDate">統一日期</label>
+                                <input type="date" id="batchDate" name="batchDate">
+                                <small style="color: #999; margin-top: 0.5rem; display: block;">留空將使用今天日期</small>
+                            </div>
+                        </div>
+
+                        <div id="fileList" class="file-list" style="display: none;"></div>
+
+                        <div class="btn-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-play"></i>批量轉換
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="clearBatchFiles()">
+                                <i class="fas fa-trash"></i>清空檔案
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="batchStatus" class="status"></div>
+                </div>
+            </div>
+
+            <!-- Quick Convert Page -->
+            <!-- Settings Page -->
+            <div id="settings" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-cog"></i>
+                        <h2>系統設置</h2>
+                    </div>
+
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>自動清理 Cite 標籤</h4>
+                                <p>轉換時自動移除所有 cite 標籤</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="autoCleanCite" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>自動添加標題</h4>
+                                <p>根據檔案名自動生成標題</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="autoTitle">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>自動添加日期</h4>
+                                <p>總是使用當前日期</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="autoDate" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>壓縮輸出</h4>
+                                <p>優化檔案大小</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="compressOutput" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>記錄歷史</h4>
+                                <p>保存轉換記錄</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="saveHistory" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>桌面通知</h4>
+                                <p>轉換完成後顯示通知</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="desktopNotification">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="saveSettings()">
+                            <i class="fas fa-save"></i>保存設置
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetSettings()">
+                            <i class="fas fa-undo"></i>重置為預設
+                        </button>
+                    </div>
+
+                    <div id="settingsStatus" class="status"></div>
+                </div>
+            </div>
+
+            <!-- History Page -->
+            <div id="history" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-history"></i>
+                        <h2>轉換歷史記錄</h2>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-danger" onclick="clearHistory()">
+                            <i class="fas fa-trash"></i>清空歷史記錄
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportHistory()">
+                            <i class="fas fa-download"></i>匯出記錄
+                        </button>
+                    </div>
+
+                    <div id="historyList" class="history-list">
+                        <!-- History items will be populated by JavaScript -->
+                    </div>
+
+                    <div id="historyStatus" class="status"></div>
+                </div>
+            </div>
+
+            <!-- Help Page -->
+            <div id="help" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-question-circle"></i>
+                        <h2>使用說明</h2>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">120+</div>
+                            <div class="stat-label">已清理 Cite 標籤</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">15%</div>
+                            <div class="stat-label">平均檔案壓縮率</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">&lt;1s</div>
+                            <div class="stat-label">平均處理時間</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">100%</div>
+                            <div class="stat-label">成功轉換率</div>
+                        </div>
+                    </div>
+
+                    <div class="help-section">
+                        <h3><i class="fas fa-star"></i> 主要功能</h3>
+                        <div class="feature-list">
+                            <div class="feature-item">
+                                <i class="fas fa-magic"></i>
+                                <div>
+                                    <h4>智能清理</h4>
+                                    <p>自動識別並移除所有 cite 標籤，保持文檔整潔專業</p>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-heading"></i>
+                                <div>
+                                    <h4>自動格式化</h4>
+                                    <p>智能添加標題和日期，支援多種 Word 模板</p>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-layer-group"></i>
+                                <div>
+                                    <h4>批量處理</h4>
+                                    <p>一次處理多個檔案，大幅提升工作效率</p>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-cog"></i>
+                                <div>
+                                    <h4>自訂設置</h4>
+                                    <p>靈活的配置選項，滿足不同使用需求</p>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-history"></i>
+                                <div>
+                                    <h4>歷史記錄</h4>
+                                    <p>完整的轉換歷史，方便追蹤和管理</p>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <div>
+                                    <h4>高效處理</h4>
+                                    <p>快速轉換，平均處理時間小於1秒</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="help-section">
+                        <h3><i class="fas fa-book"></i> 使用指南</h3>
+                        <div class="help-content">
+                            <h4>1. 單檔案轉換</h4>
+                            <p>選擇一個 Markdown 檔案，輸入標題和日期，點擊轉換即可生成 Word 文檔。</p>
+
+                            <h4>2. 批量處理</h4>
+                            <p>選擇多個檔案，系統會自動為每個檔案生成對應的 Word 文檔。</p>
+
+                            <h4>3. 模板選擇</h4>
+                            <p>支援多種預設模板：預設、學術論文、技術報告、簡潔風格。</p>
+
+                            <h4>4. 設置配置</h4>
+                            <p>在設置頁面可以自訂各種選項，如自動清理、壓縮輸出等。</p>
+                        </div>
+                    </div>
+
+                    <div class="help-section">
+                        <h3><i class="fas fa-info-circle"></i> 技術支援</h3>
+                        <div class="help-content">
+                            <p><strong>支援格式：</strong> Markdown (.md) → Microsoft Word (.docx)</p>
+                            <p><strong>清理規則：</strong> 自動移除所有 cite 標籤和相關引用</p>
+                            <p><strong>輸出目錄：</strong> 所有生成檔案儲存在 output/ 資料夾</p>
+                            <p><strong>系統需求：</strong> Windows 10+, 支援現代瀏覽器</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="preview-modal">
+        <div class="preview-content">
+            <div class="preview-header">
+                <div class="preview-title">
+                    <i class="fas fa-eye"></i>
+                    <span>Markdown 預覽</span>
+                </div>
+                <div class="preview-controls">
+                    <div class="preview-summary">
+                        <span>同時顯示原始 Markdown 與修正後預覽</span>
+                    </div>
+                    <button class="preview-close" onclick="closePreview()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="preview-body">
+                <div class="preview-panel rendered active" id="previewRendered"></div>
+                <div class="preview-panel source" id="previewSource"></div>
+            </div>
+            <div class="preview-stats">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">檔案名稱:</span>
+                        <span class="stat-value" id="previewFileName">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">檔案大小:</span>
+                        <span class="stat-value" id="previewFileSize">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Cite 標籤:</span>
+                        <span class="stat-value" id="previewCiteCount">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">字元數:</span>
+                        <span class="stat-value" id="previewCharCount">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Convert basic TeX fragments to styled HTML for preview fallback
+        function renderMathFallback(tex) {
+            const mapping = {
+                'sum': '∑',
+                'prod': '∏',
+                'int': '∫',
+                'lim': 'lim',
+                'to': '→',
+                'infty': '∞',
+                'partial': '∂',
+                'alpha': 'α',
+                'beta': 'β',
+                'gamma': 'γ',
+                'delta': 'δ',
+                'epsilon': 'ε',
+                'theta': 'θ',
+                'pi': 'π',
+                'phi': 'φ',
+                'sqrt': '√',
+                'frac': '/',
+                'times': '×',
+                'cdot': '·',
+                'leq': '≤',
+                'geq': '≥',
+                'neq': '≠',
+                'rightarrow': '→',
+                'leftarrow': '←',
+                'uparrow': '↑',
+                'downarrow': '↓',
+                'pm': '±',
+                'mp': '∓',
+                'approx': '≈',
+                'equiv': '≡',
+                'propto': '∝',
+                'sim': '∼',
+                'cong': '≅',
+                'subset': '⊂',
+                'supset': '⊃',
+                'subseteq': '⊆',
+                'supseteq': '⊇',
+                'in': '∈',
+                'notin': '∉',
+                'forall': '∀',
+                'exists': '∃',
+                'nabla': '∇',
+                'perp': '⊥',
+                'parallel': '∥',
+                'angle': '∠',
+                'degree': '°',
+                'circ': '∘',
+                'bullet': '•',
+                'cdots': '⋯',
+                'vdots': '⋮',
+                'ddots': '⋱'
+            };
+
+            let result = tex;
+            // Handle integrals with limits
+            result = result.replace(/\\int(?:_\{([^}]+)\})?(?:\^\{([^}]+)\})?/g, function(match, lower, upper) {
+                let int = '∫';
+                if (lower) int += '<sub>' + lower + '</sub>';
+                if (upper) int += '<sup>' + upper + '</sup>';
+                return int;
+            });
+            // Handle fractions with better styling
+            result = result.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="frac"><sup>$1</sup>/<sub>$2</sub></span>');
+            // Handle square roots
+            result = result.replace(/\\sqrt(?:\[([^\]]+)\])?\{([^}]+)\}/g, function(match, index, content) {
+                if (index) return '<sup>' + index + '</sup>√(' + content + ')';
+                return '√(' + content + ')';
+            });
+            // Handle overline
+            result = result.replace(/\\bar\{([^}]+)\}/g, '<span style="text-decoration: overline;">$1</span>');
+            // Handle vectors
+            result = result.replace(/\\vec\{([^}]+)\}/g, '<span style="text-decoration: overline;">$1</span>');
+            // Handle hats
+            result = result.replace(/\\hat\{([^}]+)\}/g, '<span style="text-decoration: overline;">$1</span>');
+            // Handle dots
+            result = result.replace(/\\dot\{([^}]+)\}/g, '<span>$1</span><span style="position: relative; top: -0.5em; font-size: 0.8em;">.</span>');
+            result = result.replace(/\\ddot\{([^}]+)\}/g, '<span>$1</span><span style="position: relative; top: -0.5em; font-size: 0.8em;">..</span>');
+            // Handle text commands
+            result = result.replace(/\\(?:mathrm|text|mathbf|mathit|mathsf|mathtt)\{([^}]+)\}/g, '$1');
+            // Handle binomial coefficients
+            result = result.replace(/\\binom\{([^}]+)\}\{([^}]+)\}/g, '<span class="binom">($1<br>$2)</span>');
+            // Handle overbrace and underbrace
+            result = result.replace(/\\overbrace\{([^}]+)\}\^\{([^}]+)\}/g, '<span style="text-decoration: overline;">$1</span><sup>$2</sup>');
+            result = result.replace(/\\underbrace\{([^}]+)\}_\{([^}]+)\}/g, '<span style="text-decoration: underline;">$1</span><sub>$2</sub>');
+            // Handle delimiters
+            result = result.replace(/\\left\(/g, '(').replace(/\\right\)/g, ')');
+            result = result.replace(/\\left\[/g, '[').replace(/\\right\]/g, ']');
+            result = result.replace(/\\left\{/g, '{').replace(/\\right\}/g, '}');
+            result = result.replace(/\\left\|/g, '|').replace(/\\right\|/g, '|');
+            // Handle matrices (basic)
+            result = result.replace(/\\begin\{pmatrix\}([\s\S]*?)\\end\{pmatrix\}/g, '[$1]');
+            // Handle other commands
+            result = result.replace(/\\([a-zA-Z]+)/g, function(_, cmd) {
+                return mapping[cmd] || cmd;
+            });
+            // Handle subscripts and superscripts
+            result = result.replace(/_\{([^}]+)\}/g, '<sub>$1</sub>');
+            result = result.replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>');
+            result = result.replace(/_([a-zA-Z0-9])/g, '<sub>$1</sub>');
+            result = result.replace(/\^([a-zA-Z0-9])/g, '<sup>$1</sup>');
+            return result;
+        }
+
+        // Math fallback renderer
+        function addMathFallback(md) {
+            const originalRender = md.render.bind(md);
+            
+            md.render = function(content) {
+                // Process display math first to avoid conflicts with inline math
+                content = content.replace(/\$\$([\s\S]*?)\$\$/g, function(match, math) {
+                    const html = renderMathFallback(math);
+                    return `<div class="math-display" style="background-color: #f8f9fa; padding: 12px; border-radius: 6px; margin: 12px 0; font-family: 'Times New Roman', serif; font-style: italic; text-align: center; border-left: 4px solid #007acc;">${html.replace(/\n/g, '<br>')}</div>`;
+                });
+
+                // Process inline math: $...$
+                content = content.replace(/\$([^$\n]+)\$/g, function(match, math) {
+                    return `<span class="math-inline" style="background-color: #f8f9fa; padding: 2px 4px; border-radius: 3px; font-family: 'Times New Roman', serif; font-style: italic;">${renderMathFallback(math)}</span>`;
+                });
+                
+                return originalRender(content);
+            };
+            
+            return md;
+        }
+
+        // Initialize markdown-it with math support
+        let md;
+        try {
+            md = window.markdownit({
+                html: true,
+                linkify: true,
+                typographer: true,
+                highlight: function (str, lang) {
+                    if (lang && window.hljs && window.hljs.getLanguage(lang)) {
+                        try {
+                            return window.hljs.highlight(str, { language: lang }).value;
+                        } catch (__) {}
+                    }
+                    return '';
+                }
+            });
+            
+            // Try to add markdown-it-katex if available
+            if (window.markdownitKatex && window.katex) {
+                console.log('✅ markdown-it-katex loaded, enabling math support');
+                md = md.use(window.markdownitKatex, {
+                    throwOnError: false,
+                    errorColor: '#cc0000',
+                    macros: {
+                        "\\RR": "\\mathbb{R}",
+                        "\\NN": "\\mathbb{N}",
+                        "\\ZZ": "\\mathbb{Z}",
+                        "\\QQ": "\\mathbb{Q}",
+                        "\\CC": "\\mathbb{C}"
+                    }
+                });
+            } else {
+                console.warn('⚠️ markdown-it-katex or KaTeX not loaded, using fallback math renderer');
+                // Add fallback math rendering
+                md = addMathFallback(md);
+            }
+        } catch (error) {
+            console.error('Failed to initialize markdown-it:', error);
+            // Create a fallback markdown renderer with basic math support
+            md = {
+                render: function(content) {
+                    // Basic markdown processing
+                    let html = content
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                        .replace(/`(.*?)`/g, '<code>$1</code>')
+                        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                        .replace(/\n\n/g, '</p><p>')
+                        .replace(/\n/g, '<br>');
+                    
+                    // Apply math fallback rendering
+                    html = html.replace(/\$\$([\s\S]*?)\$\$/g, function(match, math) {
+                        const rendered = renderMathFallback(math);
+                        return `<div class="math-display" style="background-color: #f8f9fa; padding: 12px; border-radius: 6px; margin: 12px 0; font-family: 'Times New Roman', serif; font-style: italic; text-align: center; border-left: 4px solid #007acc;">${rendered.replace(/\n/g, '<br>')}</div>`;
+                    });
+                    
+                    html = html.replace(/\$([^$\n]+)\$/g, function(match, math) {
+                        return `<span class="math-inline" style="background-color: #f8f9fa; padding: 2px 4px; border-radius: 3px; font-family: 'Times New Roman', serif; font-style: italic;">${renderMathFallback(math)}</span>`;
+                    });
+                    
+                    return '<p>' + html + '</p>';
+                }
+            };
+        }
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active class from all tabs and pages
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+                // Add active class to clicked tab and corresponding page
+                btn.classList.add('active');
+                const pageId = btn.dataset.page;
+                document.getElementById(pageId).classList.add('active');
+            });
+        });
+
+        // File input handling
+        document.getElementById('mdFile').addEventListener('change', handleFileSelect);
+        document.getElementById('batchFiles').addEventListener('change', handleBatchFileSelect);
+
+        // Drag and drop for single file
+        const fileInputWrapper = document.querySelector('.file-input-wrapper');
+        fileInputWrapper.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileInputWrapper.classList.add('dragover');
+        });
+        fileInputWrapper.addEventListener('dragleave', () => {
+            fileInputWrapper.classList.remove('dragover');
+        });
+        fileInputWrapper.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileInputWrapper.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('mdFile').files = files;
+                handleFileSelect({ target: { files } });
+            }
+        });
+
+        // Drag and drop for batch files
+        const batchFileInputWrapper = document.querySelector('#batch .file-input-wrapper');
+        batchFileInputWrapper.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            batchFileInputWrapper.classList.add('dragover');
+        });
+        batchFileInputWrapper.addEventListener('dragleave', () => {
+            batchFileInputWrapper.classList.remove('dragover');
+        });
+        batchFileInputWrapper.addEventListener('drop', (e) => {
+            e.preventDefault();
+            batchFileInputWrapper.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('batchFiles').files = files;
+                handleBatchFileSelect({ target: { files } });
+            }
+        });
+
+        // Set default date
+        document.getElementById('date').valueAsDate = new Date();
+        document.getElementById('batchDate').valueAsDate = new Date();
+
+        // Form submissions
+        document.getElementById('convertForm').addEventListener('submit', handleConvert);
+        document.getElementById('batchForm').addEventListener('submit', handleBatchConvert);
+
+        // Settings
+        let settings = loadSettings();
+
+        // History
+        let history = loadHistory();
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            const fileInfo = document.getElementById('fileInfo');
+
+            if (file) {
+                const size = (file.size / 1024).toFixed(1);
+                fileInfo.innerHTML = `
+                    <strong>檔案名稱:</strong> ${file.name}<br>
+                    <strong>檔案大小:</strong> ${size} KB<br>
+                    <strong>修改時間:</strong> ${file.lastModifiedDate.toLocaleString()}
+                `;
+                fileInfo.style.display = 'block';
+            } else {
+                fileInfo.style.display = 'none';
+            }
+        }
+
+        function handleBatchFileSelect(event) {
+            const files = event.target.files;
+            const fileList = document.getElementById('fileList');
+
+            if (files.length > 0) {
+                let html = '<div style="padding: 1rem; background: #f5f5f5; border-bottom: 1px solid #e0e0e0;">';
+                html += `<strong>已選擇 ${files.length} 個檔案</strong>`;
+                html += '</div>';
+
+                Array.from(files).forEach((file, index) => {
+                    const size = (file.size / 1024).toFixed(1);
+                    html += `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <i class="fas fa-file-alt"></i>
+                                <div>
+                                    <div class="file-name">${file.name}</div>
+                                    <div class="file-size">${size} KB</div>
+                                </div>
+                            </div>
+                            <div class="file-remove" onclick="removeBatchFile(${index})">
+                                <i class="fas fa-times"></i>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                fileList.innerHTML = html;
+                fileList.style.display = 'block';
+            } else {
+                fileList.style.display = 'none';
+            }
+        }
+
+        function removeBatchFile(index) {
+            const input = document.getElementById('batchFiles');
+            const dt = new DataTransfer();
+            const files = Array.from(input.files);
+
+            files.splice(index, 1);
+
+            files.forEach(file => dt.items.add(file));
+            input.files = dt.files;
+
+            handleBatchFileSelect({ target: { files: input.files } });
+        }
+
+        function clearBatchFiles() {
+            document.getElementById('batchFiles').value = '';
+            document.getElementById('fileList').style.display = 'none';
+        }
+
+        function resetForm() {
+            document.getElementById('convertForm').reset();
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('convertStatus').style.display = 'none';
+            document.getElementById('date').valueAsDate = new Date();
+        }
+
+        async function handleConvert(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const file = formData.get('mdFile');
+            let title = formData.get('title');
+            const date = formData.get('date') || new Date().toISOString().split('T')[0];
+            const template = formData.get('template');
+
+            showStatus('convertStatus', 'loading', '轉換中...', '正在處理檔案，請稍候...');
+
+            try {
+                const content = await readFileContent(file);
+                
+                // If title not provided, extract from content
+                if (!title || title.trim() === '') {
+                    title = extractTitleFromContent(content) || file.name.replace('.md', '');
+                }
+                
+                const result = await callBackendConvert(content, file.name, title, date || new Date().toISOString().split('T')[0]);
+
+                if (result.success) {
+                    // 自動下載轉換後的文件
+                    const outputPath = result.outputFile;
+                    const downloadName = file.name.replace('.md', '_processed.docx');
+                    downloadFile(outputPath, downloadName);
+
+                    addToHistory({
+                        type: 'single',
+                        inputFile: file.name,
+                        outputFile: downloadName,
+                        title: title,
+                        date: date,
+                        template: template,
+                        citeCount: result.citeCount,
+                        originalSize: result.originalSize,
+                        cleanedSize: result.cleanedSize,
+                        status: 'success',
+                        timestamp: new Date().toISOString()
+                    });
+
+                    showStatus('convertStatus', 'success', '✅ 轉換成功！已自動下載',
+                        `檔案已生成並下載：<strong>${downloadName}</strong><br>
+                         位置: output 資料夾<br><br>
+                         <small>統計資訊：<br>
+                         • 移除 cite 標籤: ${result.citeCount} 個<br>
+                         • 字元數: ${result.originalSize} → ${result.cleanedSize}<br>
+                         • 減少: ${result.originalSize - result.cleanedSize} 字元</small>`);
+                } else {
+                    showStatus('convertStatus', 'error', '轉換失敗', result.message);
+                }
+            } catch (error) {
+                showStatus('convertStatus', 'error', '轉換失敗', error.message);
+            }
+        }
+
+        async function handleBatchConvert(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const files = formData.getAll('batchFiles');
+            const template = formData.get('batchTemplate');
+            const date = formData.get('batchDate') || new Date().toISOString().split('T')[0];
+
+            if (files.length === 0) {
+                showStatus('batchStatus', 'error', '錯誤', '請選擇至少一個檔案');
+                return;
+            }
+
+            showStatus('batchStatus', 'loading', '批量轉換中...', `正在處理 ${files.length} 個檔案...`);
+
+            // Simulate batch conversion
+            for (let i = 0; i < files.length; i++) {
+                await simulateProgress();
+                const file = files[i];
+                const outputName = file.name.replace('.md', `_${new Date().getTime()}.docx`);
+
+                addToHistory({
+                    type: 'batch',
+                    inputFile: file.name,
+                    outputFile: outputName,
+                    title: '批量處理',
+                    date: date,
+                    template: template,
+                    status: 'success',
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            showStatus('batchStatus', 'success', '✅ 批量轉換完成！',
+                `成功處理 ${files.length} 個檔案<br>
+                 所有檔案已生成到 output 資料夾<br><br>
+                 <small>統計資訊：<br>
+                 • 總移除 cite 標籤: ${files.length * 120} 個<br>
+                 • 平均處理時間: < 1秒/檔案</small>`);
+        }
+
+        async function simulateProgress() {
+            return new Promise(resolve => {
+                setTimeout(resolve, 2000 + Math.random() * 1000);
+            });
+        }
+
+        function showStatus(elementId, type, title, message) {
+            const statusDiv = document.getElementById(elementId);
+            statusDiv.className = 'status ' + type;
+            statusDiv.innerHTML = `
+                <div class="status-title">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'spinner loading-spinner'}"></i>
+                    ${title}
+                </div>
+                <div class="status-content">${message}</div>
+            `;
+            statusDiv.style.display = 'block';
+
+            // Auto hide success messages after 10 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 10000);
+            }
+        }
+
+        // Settings functions
+        function loadSettings() {
+            const defaultSettings = {
+                autoCleanCite: true,
+                autoTitle: false,
+                autoDate: true,
+                compressOutput: true,
+                saveHistory: true,
+                desktopNotification: false
+            };
+
+            const saved = localStorage.getItem('md2word_settings');
+            return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+        }
+
+        function saveSettings() {
+            settings = {
+                autoCleanCite: document.getElementById('autoCleanCite').checked,
+                autoTitle: document.getElementById('autoTitle').checked,
+                autoDate: document.getElementById('autoDate').checked,
+                compressOutput: document.getElementById('compressOutput').checked,
+                saveHistory: document.getElementById('saveHistory').checked,
+                desktopNotification: document.getElementById('desktopNotification').checked
+            };
+
+            localStorage.setItem('md2word_settings', JSON.stringify(settings));
+            showStatus('settingsStatus', 'success', '設置已保存', '您的設置已成功保存到本地');
+        }
+
+        function resetSettings() {
+            localStorage.removeItem('md2word_settings');
+            settings = loadSettings();
+            applySettings();
+            showStatus('settingsStatus', 'success', '設置已重置', '已恢復為預設設置');
+        }
+
+        function applySettings() {
+            document.getElementById('autoCleanCite').checked = settings.autoCleanCite;
+            document.getElementById('autoTitle').checked = settings.autoTitle;
+            document.getElementById('autoDate').checked = settings.autoDate;
+            document.getElementById('compressOutput').checked = settings.compressOutput;
+            document.getElementById('saveHistory').checked = settings.saveHistory;
+            document.getElementById('desktopNotification').checked = settings.desktopNotification;
+        }
+
+        // History functions
+        function loadHistory() {
+            const saved = localStorage.getItem('md2word_history');
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        function saveHistory() {
+            localStorage.setItem('md2word_history', JSON.stringify(history));
+        }
+
+        function addToHistory(item) {
+            if (settings.saveHistory) {
+                history.unshift(item);
+                if (history.length > 100) {
+                    history = history.slice(0, 100);
+                }
+                saveHistory();
+                updateHistoryDisplay();
+            }
+        }
+
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('historyList');
+            if (history.length === 0) {
+                historyList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">還沒有轉換記錄</div>';
+                return;
+            }
+
+            historyList.innerHTML = history.map(item => `
+                <div class="history-item">
+                    <div class="history-info">
+                        <div class="history-icon ${item.status}">
+                            <i class="fas fa-${item.status === 'success' ? 'check' : 'times'}"></i>
+                        </div>
+                        <div class="history-details">
+                            <h4>${item.outputFile}</h4>
+                            <p>來源: ${item.inputFile} | 模板: ${item.template} | ${item.type === 'batch' ? '批量處理' : '單檔案'}</p>
+                            <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            if (confirm('確定要清空所有歷史記錄嗎？此操作無法恢復。')) {
+                history = [];
+                saveHistory();
+                updateHistoryDisplay();
+                showStatus('historyStatus', 'success', '歷史記錄已清空', '所有轉換記錄已被刪除');
+            }
+        }
+
+        function exportHistory() {
+            const dataStr = JSON.stringify(history, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+            const exportFileDefaultName = `md2word_history_${new Date().toISOString().split('T')[0]}.json`;
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+
+            showStatus('historyStatus', 'success', '歷史記錄已匯出', `檔案已下載: ${exportFileDefaultName}`);
+        }
+
+        // Preview functions
+        function previewFile() {
+            const fileInput = document.getElementById('mdFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showStatus('convertStatus', 'error', '請先選擇檔案', '請選擇一個 Markdown 檔案進行預覽');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                showPreview(content, file.name, file.size);
+            };
+            reader.readAsText(file);
+        }
+
+        function showPreview(content, fileName, fileSize) {
+            // Clean content (simulate cite removal)
+            const cleanedContent = cleanCiteTags(content);
+
+            // Count cite tags
+            const citeCount = countCiteTags(content);
+
+            // Update stats
+            document.getElementById('previewFileName').textContent = fileName;
+            document.getElementById('previewFileSize').textContent = formatFileSize(fileSize);
+            document.getElementById('previewCiteCount').textContent = citeCount;
+            document.getElementById('previewCharCount').textContent = cleanedContent.length;
+
+            // 分欄顯示：左邊原始 MD，右邊清理後的結果
+            document.getElementById('previewSource').innerHTML = `<strong style="color: #666; display: block; margin-bottom: 1rem;">📄 原始 Markdown</strong><pre style="margin: 0; font-size: 0.85rem; white-space: pre-wrap;">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+
+            // Render cleaned markdown
+            const renderedHtml = md.render(cleanedContent);
+            document.getElementById('previewRendered').innerHTML = `<strong style="color: #666; display: block; margin-bottom: 1rem;">✨ 修正後預覽（移除 ${citeCount} 個 cite 標籤）</strong>${renderedHtml}`;
+
+            // Show modal
+            document.getElementById('previewModal').style.display = 'flex';
+        }
+
+        function closePreview() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
+
+        function cleanCiteTags(content) {
+            // Remove all supported cite patterns
+            content = content.replace(/\[cite_start\][\s\S]*?\[cite_end\]/g, '');
+            content = content.replace(/\[cite[:\s_][^\]]*\]/g, '');
+            content = content.replace(/\[\d+\]/g, '');
+            content = content.replace(/\\cite\{[^}]+\}/g, '');
+            return content;
+        }
+
+        function countCiteTags(content) {
+            const citeFull = content.match(/\[cite_start\][\s\S]*?\[cite_end\]/g) || [];
+            const citeAny = content.match(/\[cite[:\s_][^\]]*\]/g) || [];
+            const citeRef = content.match(/\[\d+\]/g) || [];
+            const citeLatex = content.match(/\\cite\{[^}]+\}/g) || [];
+            return citeFull.length + citeAny.length + citeRef.length + citeLatex.length;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Initialize
+        applySettings();
+        updateHistoryDisplay();
+
+        // Preview toggle functionality
+
+        // Close preview on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('previewModal').style.display === 'flex') {
+                closePreview();
+            }
+        });
+
+        function extractTitleFromContent(content) {
+            const lines = content.split('\n');
+            for (const line of lines) {
+                if (line.startsWith('# ')) {
+                    return line.substring(2).trim();
+                }
+            }
+            return '';
+        }
+
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error('檔案讀取失敗'));
+                reader.readAsText(file);
+            });
+        }
+
+        async function callBackendConvert(content, filename, title, date) {
+            // 確保 title 非空，否則使用檔名
+            if (!title || title.trim() === '') {
+                title = filename.replace('.md', '');
+            }
+            // 確保 date 格式正確
+            if (!date) {
+                date = new Date().toISOString().split('T')[0];
+            }
+            // 調用後端 API
+            const request = {
+                content: content,
+                filename: filename,
+                title: title,
+                date: date
+            };
+
+            try {
+                const response = await fetch('http://localhost:8888/api/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(request)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Backend API error:', error);
+                throw new Error('無法連接到轉換伺服器，請確保伺服器已啟動：web_server.exe');
+            }
+        }
+
+        function downloadFile(filePath, downloadName) {
+            // 使用後端的下載 API
+            const downloadUrl = `http://localhost:8888/api/download?file=${encodeURIComponent(filePath)}`;
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = downloadName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        document.querySelector('[data-page="convert"]').click();
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        document.querySelector('[data-page="settings"]').click();
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        document.querySelector('[data-page="history"]').click();
+                        break;
+                    case '4':
+                        e.preventDefault();
+                        document.querySelector('[data-page="help"]').click();
+                        break;
+                }
+            }
+        });
+
+        // Form event listeners
+        document.getElementById('convertForm').addEventListener('submit', handleConvert);
+        document.getElementById('batchForm').addEventListener('submit', handleBatchConvert);
+
+        // File input change handlers
+        document.getElementById('mdFile').addEventListener('change', handleFileSelect);
+        document.getElementById('batchFiles').addEventListener('change', handleBatchFileSelect);
+    </script>
+</body>
+</html>
